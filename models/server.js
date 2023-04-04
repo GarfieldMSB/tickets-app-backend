@@ -3,6 +3,7 @@ const express  = require('express');
 const http     = require('http');
 const socketio = require('socket.io');
 const path     = require('path');
+const cors = require('cors');
 
 const Sockets = require('./sockets');
 
@@ -16,17 +17,33 @@ class Server {
         this.server = http.createServer(this.app)
 
         // Configuraciones de socket
-        this.io = socketio(this.server, { /* configuraciones */ });
+        this.io = socketio(this.server, { cors: {
+            origin: "http://localhost:3000",
+        }});
+
+        // Inicializar sockets
+        this.sockets = new Sockets(this.io);
     };
 
     middlewares() {
         //Desplegar el directorio público
         this.app.use(express.static(path.resolve( __dirname, '../public' )));
+
+        // CORS
+        this.app.use( cors() );
+
+        // Get de los ultimos tickets
+        this.app.get('/ultimos', (req, res) => {
+            res.json({
+                ok: true,
+                ultimos: this.sockets.ticketList.ultimos13
+            })
+        })
     };
 
-    configurarSockets() {
-        new Sockets(this.io)
-    }
+    // configurarSockets() {
+    //     new Sockets(this.io)
+    // }
 
     // Metodos
     execute() {
@@ -34,7 +51,7 @@ class Server {
         this.middlewares();
 
         // Inicializar sockets
-        this.configurarSockets();
+        // this.configurarSockets();
 
         // Inicializar server
         this.server.listen(this.port, () => {
